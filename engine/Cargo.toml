@@ -11,99 +11,70 @@ categories = ["finance", "cryptocurrency", "trading"]
 readme = "README.md"
 
 [dependencies]
-# Async runtime
-tokio = { version = "1.35", features = ["full"] }
-tokio-util = "0.7"
-futures = "0.3"
-futures-util = "0.3"
+# Use workspace dependencies
+tokio = { workspace = true }
+futures = { workspace = true }
+futures-util = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+axum = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+hyper = { workspace = true }
+reqwest = { workspace = true }
+tokio-tungstenite = { workspace = true }
+tungstenite = { workspace = true }
+# sqlx = { workspace = true } # Temporarily disabled due to version conflicts
+redis = { workspace = true }
+solana-client = { workspace = true }
+solana-sdk = { workspace = true }
+solana-program = { workspace = true }
+solana-account-decoder = { workspace = true }
+anchor-lang = { workspace = true }
+spl-token = { workspace = true }
+spl-associated-token-account = { workspace = true }
 
-# Serialization
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-toml = "0.8"
-
-# Web framework and HTTP
-axum = { version = "0.7", features = ["ws", "headers", "multipart"] }
-tower = "0.4"
-tower-http = { version = "0.5", features = ["cors", "trace", "compression-gzip"] }
-hyper = "1.0"
-reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
-
-# WebSocket
-tokio-tungstenite = { version = "0.21", features = ["rustls-tls-webpki-roots"] }
-tungstenite = "0.21"
-
-# Database
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json", "bigdecimal"] }
-
-# Redis
-redis = { version = "0.24", features = ["tokio-comp", "connection-manager", "streams"] }
-
-# Solana
-solana-client = "1.17"
-solana-sdk = "1.17"
-solana-program = "1.17"
-solana-account-decoder = "1.17"
-anchor-client = "0.29"
-anchor-lang = "0.29"
-spl-token = "4.0"
-spl-associated-token-account = "2.2"
-
-# Geyser gRPC
-tonic = "0.10"
-prost = "0.12"
-tonic-build = "0.10"
-
-# Cryptography
-sha2 = "0.10"
-hmac = "0.12"
+# Additional dependencies not in workspace (temporarily disabled)
+# tonic = "0.10"
+# prost = "0.12"
+# tonic-build = "0.10"
 rand = "0.8"
 bs58 = "0.5"
-
-# Numeric types
 bigdecimal = { version = "0.4", features = ["serde"] }
-rust_decimal = { version = "1.33", features = ["serde-float"] }
-num-traits = "0.2"
-num-bigint = "0.4"
-
-# Time and dates
-chrono = { version = "0.4", features = ["serde"] }
 tokio-cron-scheduler = "0.9"
-
-# Logging and tracing
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 tracing-appender = "0.2"
-log = "0.4"
-
-# Error handling
-thiserror = "1.0"
-anyhow = "1.0"
-
-# Configuration
 config = "0.14"
 clap = { version = "4.4", features = ["derive"] }
-
-# Utilities
-uuid = { version = "1.6", features = ["v4", "serde"] }
-once_cell = "1.19"
-lazy_static = "1.4"
 dashmap = "5.5"
 parking_lot = "0.12"
 byteorder = "1.5"
-bytes = "1.5"
-base64 = "0.21"
-hex = "0.4"
-
-# Metrics and monitoring
-prometheus = "0.13"
-sysinfo = "0.30"
-
-# Rate limiting
 governor = "0.6"
+num_cpus = "1.16"
+
+# Use workspace dependencies
+sha2 = { workspace = true }
+hmac = { workspace = true }
+rust_decimal = { workspace = true }
+num-traits = { workspace = true }
+num-bigint = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+log = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+uuid = { workspace = true }
+once_cell = { workspace = true }
+lazy_static = { workspace = true }
+bytes = { workspace = true }
+base64 = { workspace = true }
+hex = { workspace = true }
+prometheus = { workspace = true }
+sysinfo = { workspace = true }
 
 # Jupiter SDK (for Jupiter DEX integration)
-jupiter-swap-api-client = { git = "https://github.com/jup-ag/jupiter-swap-api-client", optional = true }
+# jupiter-swap-api-client = { git = "https://github.com/jup-ag/jupiter-swap-api-client", optional = true }
 
 # Development dependencies
 [dev-dependencies]
@@ -116,30 +87,16 @@ tempfile = "3.8"
 
 # Features
 [features]
-default = ["jupiter"]
-jupiter = ["jupiter-swap-api-client"]
+default = []
+# jupiter = ["jupiter-swap-api-client"]
 
 # Build script for gRPC code generation
 [build-dependencies]
 tonic-build = "0.10"
 
-# Optimization profiles
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-panic = "abort"
-strip = true
+# Profiles are defined in the workspace root
 
-[profile.dev]
-opt-level = 0
-debug = true
-strip = false
-
-# Workspace configuration
-[workspace]
-members = [".", "../programs/*"]
-resolver = "2"
+# This crate is part of the main workspace
 
 # Metadata for cargo-audit
 [package.metadata.audit]
