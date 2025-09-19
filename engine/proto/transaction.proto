@@ -1,0 +1,199 @@
+syntax = "proto3";
+
+package geyser;
+
+// Solana transaction structure
+message Transaction {
+  repeated bytes signatures = 1;
+  Message message = 2;
+}
+
+// Transaction message
+message Message {
+  MessageHeader header = 1;
+  repeated bytes account_keys = 2;
+  bytes recent_blockhash = 3;
+  repeated CompiledInstruction instructions = 4;
+  optional MessageAddressTableLookup address_table_lookups = 5;
+}
+
+// Message header
+message MessageHeader {
+  uint32 num_required_signatures = 1;
+  uint32 num_readonly_signed_accounts = 2;
+  uint32 num_readonly_unsigned_accounts = 3;
+}
+
+// Compiled instruction
+message CompiledInstruction {
+  uint32 program_id_index = 1;
+  bytes accounts = 2;
+  bytes data = 3;
+}
+
+// Message address table lookup
+message MessageAddressTableLookup {
+  bytes account_key = 1;
+  bytes writable_indexes = 2;
+  bytes readonly_indexes = 3;
+}
+
+// Transaction status
+message TransactionStatus {
+  optional TransactionError err = 1;
+  TransactionConfirmationStatus status = 2;
+}
+
+// Transaction error
+message TransactionError {
+  oneof error {
+    AccountInUse account_in_use = 1;
+    AccountLoadedTwice account_loaded_twice = 2;
+    AccountNotFound account_not_found = 3;
+    ProgramAccountNotFound program_account_not_found = 4;
+    InsufficientFundsForFee insufficient_funds_for_fee = 5;
+    InvalidAccountForFee invalid_account_for_fee = 6;
+    AlreadyProcessed already_processed = 7;
+    BlockhashNotFound blockhash_not_found = 8;
+    InstructionError instruction_error = 9;
+    CallChainTooDeep call_chain_too_deep = 10;
+    MissingSignatureForFee missing_signature_for_fee = 11;
+    InvalidAccountIndex invalid_account_index = 12;
+    SignatureFailure signature_failure = 13;
+    InvalidProgramForExecution invalid_program_for_execution = 14;
+    SanitizeFailure sanitize_failure = 15;
+    ClusterMaintenance cluster_maintenance = 16;
+    AccountBorrowOutstanding account_borrow_outstanding = 17;
+    WouldExceedMaxBlockCostLimit would_exceed_max_block_cost_limit = 18;
+    UnsupportedVersion unsupported_version = 19;
+    InvalidWritableAccount invalid_writable_account = 20;
+    WouldExceedMaxAccountCostLimit would_exceed_max_account_cost_limit = 21;
+    WouldExceedAccountDataBlockLimit would_exceed_account_data_block_limit = 22;
+    TooManyAccountLocks too_many_account_locks = 23;
+    AddressLookupTableNotFound address_lookup_table_not_found = 24;
+    InvalidAddressLookupTableOwner invalid_address_lookup_table_owner = 25;
+    InvalidAddressLookupTableData invalid_address_lookup_table_data = 26;
+    InvalidAddressLookupTableIndex invalid_address_lookup_table_index = 27;
+    InvalidRentPayingAccount invalid_rent_paying_account = 28;
+    WouldExceedMaxVoteCostLimit would_exceed_max_vote_cost_limit = 29;
+    WouldExceedAccountDataTotalLimit would_exceed_account_data_total_limit = 30;
+    DuplicateInstruction duplicate_instruction = 31;
+    InsufficientFundsForRent insufficient_funds_for_rent = 32;
+    MaxLoadedAccountsDataSizeExceeded max_loaded_accounts_data_size_exceeded = 33;
+    InvalidLoadedAccountsDataSizeLimit invalid_loaded_accounts_data_size_limit = 34;
+    ResanitizationNeeded resanitization_needed = 35;
+    ProgramExecutionTemporarilyRestricted program_execution_temporarily_restricted = 36;
+    UnbalancedTransaction unbalanced_transaction = 37;
+    ProgramCacheHitMaxLimit program_cache_hit_max_limit = 38;
+  }
+}
+
+// Instruction error
+message InstructionError {
+  uint32 index = 1;
+  InstructionErrorType error = 2;
+}
+
+// Transaction confirmation status
+enum TransactionConfirmationStatus {
+  PROCESSED = 0;
+  CONFIRMED = 1;
+  FINALIZED = 2;
+}
+
+// Instruction error type
+enum InstructionErrorType {
+  GENERIC_ERROR = 0;
+  INVALID_ARGUMENT = 1;
+  INVALID_INSTRUCTION_DATA = 2;
+  INVALID_ACCOUNT_DATA = 3;
+  ACCOUNT_DATA_TOO_SMALL = 4;
+  INSUFFICIENT_FUNDS = 5;
+  INCORRECT_PROGRAM_ID = 6;
+  MISSING_REQUIRED_SIGNATURE = 7;
+  ACCOUNT_ALREADY_INITIALIZED = 8;
+  UNINITIALIZED_ACCOUNT = 9;
+  UNBALANCED_INSTRUCTION = 10;
+  MODIFIED_PROGRAM_ID = 11;
+  EXTERNAL_ACCOUNT_LAMPORT_SPEND = 12;
+  EXTERNAL_ACCOUNT_DATA_MODIFIED = 13;
+  READONLY_LAMPORT_CHANGE = 14;
+  READONLY_DATA_MODIFIED = 15;
+  DUPLICATE_ACCOUNT_INDEX = 16;
+  EXECUTABLE_MODIFIED = 17;
+  RENT_EPOCH_MODIFIED = 18;
+  NOT_ENOUGH_ACCOUNT_KEYS = 19;
+  ACCOUNT_DATA_SIZE_CHANGED = 20;
+  ACCOUNT_NOT_EXECUTABLE = 21;
+  ACCOUNT_BORROW_FAILED = 22;
+  ACCOUNT_BORROW_OUTSTANDING = 23;
+  DUPLICATE_ACCOUNT_OUT_OF_SYNC = 24;
+  CUSTOM = 25;
+  INVALID_ERROR = 26;
+  EXECUTABLE_DATA_MODIFIED = 27;
+  EXECUTABLE_LAMPORT_CHANGE = 28;
+  EXECUTABLE_ACCOUNT_NOT_RENT_EXEMPT = 29;
+  UNSUPPORTED_PROGRAM_ID = 30;
+  CALL_DEPTH = 31;
+  MISSING_ACCOUNT = 32;
+  REENTRANCY_NOT_ALLOWED = 33;
+  MAX_SEED_LENGTH_EXCEEDED = 34;
+  INVALID_SEEDS = 35;
+  INVALID_REALLOC = 36;
+  COMPUTATIONAL_BUDGET_EXCEEDED = 37;
+  PRIVILEGE_ESCALATION = 38;
+  PROGRAM_ENVIRONMENT_SETUP_FAILURE = 39;
+  PROGRAM_FAILED_TO_COMPLETE = 40;
+  PROGRAM_FAILED_TO_COMPILE = 41;
+  IMMUTABLE = 42;
+  INCORRECT_AUTHORITY = 43;
+  BORSH_IO_ERROR = 44;
+  ACCOUNT_NOT_RENT_EXEMPT = 45;
+  INVALID_ACCOUNT_OWNER = 46;
+  ARITHMETIC_OVERFLOW = 47;
+  UNSUPPORTED_SYSVAR = 48;
+  ILLEGAL_OWNER = 49;
+  MAX_ACCOUNTS_DATA_ALLOCATIONS_EXCEEDED = 50;
+  MAX_ACCOUNTS_EXCEEDED = 51;
+  MAX_INSTRUCTION_TRACE_LENGTH_EXCEEDED = 52;
+  BUILTIN_PROGRAMS_MUST_CONSUME_COMPUTE_UNITS = 53;
+}
+
+// Error types (empty messages for oneof)
+message AccountInUse {}
+message AccountLoadedTwice {}
+message AccountNotFound {}
+message ProgramAccountNotFound {}
+message InsufficientFundsForFee {}
+message InvalidAccountForFee {}
+message AlreadyProcessed {}
+message BlockhashNotFound {}
+message CallChainTooDeep {}
+message MissingSignatureForFee {}
+message InvalidAccountIndex {}
+message SignatureFailure {}
+message InvalidProgramForExecution {}
+message SanitizeFailure {}
+message ClusterMaintenance {}
+message AccountBorrowOutstanding {}
+message WouldExceedMaxBlockCostLimit {}
+message UnsupportedVersion {}
+message InvalidWritableAccount {}
+message WouldExceedMaxAccountCostLimit {}
+message WouldExceedAccountDataBlockLimit {}
+message TooManyAccountLocks {}
+message AddressLookupTableNotFound {}
+message InvalidAddressLookupTableOwner {}
+message InvalidAddressLookupTableData {}
+message InvalidAddressLookupTableIndex {}
+message InvalidRentPayingAccount {}
+message WouldExceedMaxVoteCostLimit {}
+message WouldExceedAccountDataTotalLimit {}
+message DuplicateInstruction {}
+message InsufficientFundsForRent {}
+message MaxLoadedAccountsDataSizeExceeded {}
+message InvalidLoadedAccountsDataSizeLimit {}
+message ResanitizationNeeded {}
+message ProgramExecutionTemporarilyRestricted {}
+message UnbalancedTransaction {}
+message ProgramCacheHitMaxLimit {}

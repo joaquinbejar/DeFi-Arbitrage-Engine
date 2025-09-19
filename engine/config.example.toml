@@ -1,0 +1,212 @@
+# Solana DeFi Arbitrage Engine Configuration
+# Copy this file to config.toml and adjust the values for your environment
+
+[database]
+url = "timescaledb://username:password@localhost:5432/arbitrage_db"
+max_connections = 20
+min_connections = 5
+connection_timeout = 30
+idle_timeout = 600
+max_lifetime = 1800
+
+[redis]
+url = "redis://localhost:6379"
+max_connections = 10
+min_connections = 2
+connection_timeout = 5
+idle_timeout = 300
+max_lifetime = 600
+default_ttl = 300
+
+[solana]
+rpc_url = "https://api.mainnet-beta.solana.com"
+ws_url = "wss://api.mainnet-beta.solana.com"
+commitment = "confirmed"
+timeout = 30
+max_retries = 3
+retry_delay = 1000
+
+# Geyser gRPC configuration
+[solana.geyser]
+endpoint = "grpc://localhost:10000"
+token = "your-geyser-token"
+max_message_size = 4194304  # 4MB
+connection_timeout = 10
+reconnect_interval = 5
+ping_interval = 30
+
+[dex]
+# DEX configurations
+[dex.raydium]
+enabled = true
+program_id = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+api_url = "https://api.raydium.io"
+max_slippage = 0.01
+min_liquidity = 1000.0
+
+[dex.orca]
+enabled = true
+program_id = "9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP"
+api_url = "https://api.orca.so"
+max_slippage = 0.01
+min_liquidity = 1000.0
+
+[dex.meteora]
+enabled = true
+program_id = "Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB"
+api_url = "https://app.meteora.ag"
+max_slippage = 0.01
+min_liquidity = 1000.0
+
+[dex.jupiter]
+enabled = true
+api_url = "https://quote-api.jup.ag"
+max_slippage = 0.01
+min_liquidity = 1000.0
+
+[trading]
+# Trading configuration
+max_position_size = 10000.0
+min_profit_threshold = 0.005  # 0.5%
+max_slippage = 0.01  # 1%
+gas_price_multiplier = 1.2
+max_gas_price = 0.01
+trade_timeout = 30
+max_concurrent_trades = 5
+
+# Wallet configuration
+[trading.wallet]
+keypair_path = "/path/to/your/keypair.json"
+max_sol_balance = 100.0
+min_sol_balance = 1.0
+auto_rebalance = true
+
+[risk]
+# Risk management
+max_daily_loss = 1000.0
+max_position_size = 10000.0
+max_exposure_per_token = 5000.0
+max_exposure_per_dex = 15000.0
+stop_loss_threshold = 0.05  # 5%
+max_drawdown = 0.10  # 10%
+
+# Circuit breaker settings
+[risk.circuit_breaker]
+max_consecutive_losses = 5
+loss_threshold = 100.0
+cooldown_period = 300  # 5 minutes
+recovery_threshold = 0.02  # 2%
+
+[api]
+# REST API configuration
+host = "0.0.0.0"
+port = 8080
+max_connections = 1000
+timeout = 30
+cors_origins = ["*"]
+rate_limit = 100  # requests per minute
+
+# API authentication
+[api.auth]
+enabled = false
+jwt_secret = "your-jwt-secret-key"
+token_expiry = 3600  # 1 hour
+
+[websocket]
+# WebSocket server configuration
+host = "0.0.0.0"
+port = 8081
+max_connections = 1000
+ping_interval = 30
+pong_timeout = 10
+max_message_size = 1048576  # 1MB
+
+[metrics]
+# Metrics and monitoring
+host = "0.0.0.0"
+port = 9090
+path = "/metrics"
+collection_interval = 10
+retention_period = 86400  # 24 hours
+
+# Prometheus configuration
+[metrics.prometheus]
+enabled = true
+namespace = "arbitrage_engine"
+labels = { environment = "production", version = "0.1.0" }
+
+[logging]
+# Logging configuration
+level = "info"
+format = "json"
+output = "stdout"
+max_file_size = 100  # MB
+max_files = 10
+compress = true
+
+# Log targets
+[logging.targets]
+file = "/var/log/arbitrage-engine/app.log"
+error_file = "/var/log/arbitrage-engine/error.log"
+access_file = "/var/log/arbitrage-engine/access.log"
+
+[performance]
+# Performance tuning
+max_threads = 8
+worker_threads = 4
+blocking_threads = 4
+thread_stack_size = 2097152  # 2MB
+enable_io_uring = false
+
+# Memory settings
+[performance.memory]
+max_heap_size = 2147483648  # 2GB
+garbage_collection_interval = 60
+cache_size = 536870912  # 512MB
+
+[security]
+# Security settings
+enable_tls = false
+tls_cert_path = "/path/to/cert.pem"
+tls_key_path = "/path/to/key.pem"
+max_request_size = 1048576  # 1MB
+rate_limit_window = 60  # seconds
+
+# IP whitelist/blacklist
+[security.access_control]
+whitelist = []
+blacklist = []
+allow_localhost = true
+
+[notifications]
+# Notification settings
+[notifications.discord]
+enabled = false
+webhook_url = "https://discord.com/api/webhooks/your-webhook"
+min_profit_alert = 100.0
+error_alerts = true
+
+[notifications.telegram]
+enabled = false
+bot_token = "your-telegram-bot-token"
+chat_id = "your-chat-id"
+min_profit_alert = 100.0
+error_alerts = true
+
+[notifications.email]
+enabled = false
+smtp_host = "smtp.gmail.com"
+smtp_port = 587
+username = "your-email@gmail.com"
+password = "your-app-password"
+to_addresses = ["alerts@yourcompany.com"]
+min_profit_alert = 100.0
+error_alerts = true
+
+# Development settings (only for development environment)
+[development]
+debug_mode = false
+mock_transactions = false
+dry_run = false
+log_all_opportunities = false
+bypass_risk_checks = false

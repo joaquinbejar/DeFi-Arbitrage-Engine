@@ -1,0 +1,312 @@
+# DeFi Arbitrage Engine Configuration
+# This file contains all configuration settings for the arbitrage engine
+
+[server]
+# HTTP server configuration
+host = "0.0.0.0"
+port = 8080
+max_connections = 1000
+request_timeout_ms = 30000
+enable_cors = true
+enable_compression = true
+
+# WebSocket configuration
+ws_port = 8081
+ws_max_connections = 500
+ws_heartbeat_interval_ms = 30000
+ws_message_buffer_size = 1000
+
+[database]
+# TimescaleDB configuration
+url = "timescaledb://arbitrage_user:password@localhost:5432/arbitrage_db"
+max_connections = 20
+min_connections = 5
+connection_timeout_ms = 5000
+query_timeout_ms = 30000
+
+# Database pool settings
+max_lifetime_ms = 1800000  # 30 minutes
+idle_timeout_ms = 600000   # 10 minutes
+
+# Migration settings
+auto_migrate = true
+migration_path = "migrations"
+
+[cache]
+# Redis configuration
+url = "redis://localhost:6379"
+db = 0
+max_connections = 50
+connection_timeout_ms = 3000
+command_timeout_ms = 5000
+
+# Cache TTL settings (in seconds)
+price_ttl = 5
+opportunity_ttl = 10
+quote_ttl = 30
+liquidity_ttl = 60
+dex_status_ttl = 120
+token_info_ttl = 3600
+
+# Cache key prefixes
+key_prefix = "arb:"
+price_prefix = "price:"
+opportunity_prefix = "opp:"
+quote_prefix = "quote:"
+
+[solana]
+# Solana RPC configuration
+rpc_urls = [
+    "https://api.mainnet-beta.solana.com",
+    "https://solana-api.projectserum.com",
+    "https://rpc.ankr.com/solana"
+]
+ws_url = "wss://api.mainnet-beta.solana.com"
+commitment = "confirmed"
+timeout_ms = 10000
+max_retries = 3
+
+# Geyser gRPC configuration
+geyser_endpoint = "grpc://localhost:10000"
+geyser_token = ""
+geyser_timeout_ms = 5000
+
+# Transaction settings
+max_compute_units = 1400000
+priority_fee_lamports = 5000
+max_retries = 5
+confirmation_timeout_ms = 30000
+
+[dex]
+# DEX integration settings
+
+[dex.raydium]
+enabled = true
+program_id = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+api_url = "https://api.raydium.io"
+max_slippage_bps = 100  # 1%
+min_liquidity_usd = 10000
+priority_fee_lamports = 5000
+
+[dex.orca]
+enabled = true
+program_id = "9W959DqEETiGZocYWCQPaJ6sD6MUGLiAZH6Aq9Qk9K6T"
+api_url = "https://api.orca.so"
+max_slippage_bps = 100
+min_liquidity_usd = 10000
+priority_fee_lamports = 5000
+
+[dex.meteora]
+enabled = true
+program_id = "Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB"
+api_url = "https://app.meteora.ag"
+max_slippage_bps = 150
+min_liquidity_usd = 5000
+priority_fee_lamports = 7500
+
+[dex.jupiter]
+enabled = true
+api_url = "https://quote-api.jup.ag"
+max_slippage_bps = 50
+min_liquidity_usd = 1000
+max_accounts = 64
+priority_fee_lamports = 10000
+
+[trading]
+# Trading configuration
+dry_run = false
+max_position_size_usd = 50000
+min_profit_threshold_usd = 10
+max_slippage_bps = 100
+max_price_impact_bps = 200
+
+# Position sizing
+default_position_size_usd = 1000
+max_positions = 10
+position_size_multiplier = 1.5
+
+# Execution settings
+max_execution_time_ms = 5000
+max_concurrent_trades = 5
+min_confirmation_time_ms = 1000
+
+# MEV protection
+enable_mev_protection = true
+max_frontrun_protection_ms = 2000
+sandwich_detection_enabled = true
+
+[risk]
+# Risk management settings
+max_daily_loss_usd = 5000
+max_drawdown_percent = 10.0
+stop_loss_percent = 2.0
+take_profit_percent = 5.0
+
+# Portfolio limits
+max_portfolio_value_usd = 100000
+max_token_concentration_percent = 20.0
+max_dex_concentration_percent = 30.0
+
+# Risk monitoring
+risk_check_interval_ms = 1000
+volatility_threshold = 0.05
+liquidity_threshold_usd = 10000
+
+# Circuit breakers
+enable_circuit_breaker = true
+max_consecutive_losses = 5
+circuit_breaker_cooldown_ms = 300000  # 5 minutes
+
+[monitoring]
+# Logging configuration
+log_level = "info"
+log_format = "json"
+log_file = "logs/arbitrage.log"
+max_log_size_mb = 100
+max_log_files = 10
+
+# Metrics configuration
+enable_metrics = true
+metrics_port = 9090
+metrics_path = "/metrics"
+metrics_interval_ms = 5000
+
+# Health check settings
+health_check_interval_ms = 10000
+health_check_timeout_ms = 5000
+
+# Alerting
+enable_alerts = true
+alert_webhook_url = ""
+alert_email = ""
+max_alert_frequency_ms = 60000
+
+[opportunities]
+# Opportunity detection settings
+min_profit_usd = 5.0
+min_profit_percent = 0.1
+max_opportunity_age_ms = 5000
+max_opportunities_per_second = 100
+
+# Scanning configuration
+scan_interval_ms = 100
+max_scan_depth = 3
+enable_cross_dex_arbitrage = true
+enable_triangular_arbitrage = true
+
+# Filtering
+min_liquidity_usd = 1000
+max_price_impact_bps = 300
+blacklisted_tokens = []
+whitelisted_tokens = []
+
+# Route optimization
+max_routes_per_pair = 5
+route_timeout_ms = 2000
+enable_route_caching = true
+
+[tokens]
+# Token configuration
+default_decimals = 9
+min_token_balance = 1000000  # 0.001 tokens with 9 decimals
+
+# Supported tokens (Solana mainnet)
+[tokens.SOL]
+symbol = "SOL"
+mint = "So11111111111111111111111111111111111111112"
+decimals = 9
+coingecko_id = "solana"
+
+[tokens.USDC]
+symbol = "USDC"
+mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+decimals = 6
+coingecko_id = "usd-coin"
+
+[tokens.USDT]
+symbol = "USDT"
+mint = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+decimals = 6
+coingecko_id = "tether"
+
+[tokens.RAY]
+symbol = "RAY"
+mint = "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R"
+decimals = 6
+coingecko_id = "raydium"
+
+[tokens.SRM]
+symbol = "SRM"
+mint = "SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt"
+decimals = 6
+coingecko_id = "serum"
+
+[tokens.ORCA]
+symbol = "ORCA"
+mint = "orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE"
+decimals = 6
+coingecko_id = "orca"
+
+[tokens.MNGO]
+symbol = "MNGO"
+mint = "MangoCzJ36AjZyKwVj3VnYU4GTonjfVEnJmvvWaxLac"
+decimals = 6
+coingecko_id = "mango-markets"
+
+[performance]
+# Performance optimization settings
+max_worker_threads = 8
+max_blocking_threads = 4
+thread_stack_size_kb = 2048
+
+# Memory settings
+max_memory_usage_mb = 2048
+gc_interval_ms = 60000
+max_cache_size_mb = 512
+
+# Network settings
+max_concurrent_requests = 100
+request_pool_size = 50
+connection_pool_size = 20
+
+# Batch processing
+batch_size = 100
+batch_timeout_ms = 1000
+max_batch_queue_size = 1000
+
+[security]
+# Security settings
+enable_rate_limiting = true
+max_requests_per_minute = 1000
+max_requests_per_hour = 10000
+
+# API security
+api_key_required = false
+api_key_header = "X-API-Key"
+valid_api_keys = []
+
+# CORS settings
+cors_allowed_origins = ["*"]
+cors_allowed_methods = ["GET", "POST", "PUT", "DELETE"]
+cors_allowed_headers = ["Content-Type", "Authorization"]
+
+# SSL/TLS
+enable_tls = false
+tls_cert_path = ""
+tls_key_path = ""
+
+[development]
+# Development settings
+enable_debug_mode = false
+enable_profiling = false
+enable_hot_reload = false
+
+# Testing
+enable_test_mode = false
+test_rpc_url = "https://api.devnet.solana.com"
+test_private_key = ""
+
+# Mock settings
+mock_dex_responses = false
+mock_price_feeds = false
+simulate_network_latency_ms = 0

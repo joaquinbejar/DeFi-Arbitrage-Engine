@@ -1,0 +1,272 @@
+version: '3.8'
+
+services:
+  # TimescaleDB for historical data storage
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: arbitrage-timescaledb
+    environment:
+      TIMESCALEDB_DB: arbitrage_db
+      TIMESCALEDB_USER: arbitrage_user
+      TIMESCALEDB_PASSWORD: arbitrage_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    command: >
+      postgres
+      -c shared_preload_libraries=timescaledb
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arbitrage_user -d arbitrage_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - arbitrage-network
+
+  # Redis for caching and real-time data
+  redis:
+    image: redis:7-alpine
+    container_name: arbitrage-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - arbitrage-network
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: arbitrage-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - arbitrage-network
+
+  # Grafana for monitoring dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: arbitrage-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: arbitrage_admin
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - arbitrage-network
+
+  # Jaeger for distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: arbitrage-jaeger
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+    restart: unless-stopped
+    networks:
+      - arbitrage-network
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: arbitrage-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - arbitrage-engine
+    restart: unless-stopped
+    networks:
+      - arbitrage-network
+
+  # Main arbitrage engine
+  arbitrage-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arbitrage-engine
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+      - "9091:9091"  # Metrics port
+    environment:
+      RUST_LOG: info,defi_arbitrage_engine=debug
+      DATABASE_URL: timescaledb://arbitrage_user:arbitrage_password@timescaledb:5432/arbitrage_db
+      REDIS_URL: redis://redis:6379
+      PROMETHEUS_URL: http://prometheus:9090
+      JAEGER_ENDPOINT: http://jaeger:14268/api/traces
+    volumes:
+      - ./config.toml:/app/config.toml
+      - ./logs:/app/logs
+      - engine_data:/app/data
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - arbitrage-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Log aggregation with Loki
+  loki:
+    image: grafana/loki:latest
+    container_name: arbitrage-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+    networks:
+      - arbitrage-network
+
+  # Log shipping with Promtail
+  promtail:
+    image: grafana/promtail:latest
+    container_name: arbitrage-promtail
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml
+      - ./logs:/var/log/arbitrage
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    restart: unless-stopped
+    networks:
+      - arbitrage-network
+
+  # Node Exporter for system metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: arbitrage-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    networks:
+      - arbitrage-network
+
+  # cAdvisor for container metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: arbitrage-cadvisor
+    ports:
+      - "8082:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    restart: unless-stopped
+    networks:
+      - arbitrage-network
+
+  # Backup service
+  backup:
+    image: timescale/timescaledb:latest-pg15
+    container_name: arbitrage-backup
+    environment:
+      PGPASSWORD: arbitrage_password
+      TIMESCALEDB_PASSWORD: arbitrage_password
+    volumes:
+      - ./backups:/backups
+      - ./scripts/backup.sh:/backup.sh
+    command: >
+      sh -c '
+        chmod +x /backup.sh &&
+        while true; do
+          /backup.sh
+          sleep 86400
+        done
+      '
+    depends_on:
+      - timescaledb
+    restart: unless-stopped
+    networks:
+      - arbitrage-network
+
+volumes:
+  timescaledb_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+  engine_data:
+    driver: local
+
+networks:
+  arbitrage-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

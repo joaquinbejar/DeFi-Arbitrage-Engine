@@ -1,0 +1,73 @@
+[toolchain]
+
+[features]
+seeds = false
+skip-lint = false
+resolution = true
+allow-missing-optionals = false
+
+[programs.localnet]
+flash_arbitrage = "FLASHarb1trag3Pr0gram11111111111111111111"
+cross_dex_router = "CR0SSdexR0uter11111111111111111111111111"
+mev_protection = "MEVpr0tect10n11111111111111111111111111111"
+
+[programs.devnet]
+flash_arbitrage = "FLASHarb1trag3Pr0gram11111111111111111111"
+cross_dex_router = "CR0SSdexR0uter11111111111111111111111111"
+mev_protection = "MEVpr0tect10n11111111111111111111111111111"
+
+[programs.mainnet]
+flash_arbitrage = "FLASHarb1trag3Pr0gram11111111111111111111"
+cross_dex_router = "CR0SSdexR0uter11111111111111111111111111"
+mev_protection = "MEVpr0tect10n11111111111111111111111111111"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+[workspace]
+members = [
+    "flash-arbitrage",
+    "cross-dex-router",
+    "mev-protection"
+]
+
+[test]
+startup_wait = 5000
+shutdown_wait = 2000
+upgrade_authority_off = false
+genesis = []
+
+[test.validator]
+url = "https://api.devnet.solana.com"
+ledger = ".anchor/test-ledger"
+bind_address = "0.0.0.0"
+rpc_port = 8899
+ws_port = 8900
+limit_ledger_size = 10000
+
+[[test.validator.clone]]
+address = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8" # Raydium
+
+[[test.validator.clone]]
+address = "9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP" # Orca
+
+[[test.validator.clone]]
+address = "Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB" # Meteora
+
+[[test.validator.clone]]
+address = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4" # Jupiter
+
+[[test.validator.account]]
+address = "So11111111111111111111111111111111111111112" # WSOL
+filename = "wsol.json"
+
+[[test.validator.account]]
+address = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" # USDC
+filename = "usdc.json"

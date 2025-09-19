@@ -1,0 +1,186 @@
+syntax = "proto3";
+
+package geyser;
+
+import "confirmed_block.proto";
+import "transaction.proto";
+
+// Geyser gRPC service for streaming Solana blockchain data
+service Geyser {
+  // Subscribe to account updates
+  rpc SubscribeAccountUpdates(SubscribeAccountUpdatesRequest) returns (stream AccountUpdate);
+  
+  // Subscribe to program account updates
+  rpc SubscribeProgramUpdates(SubscribeProgramUpdatesRequest) returns (stream AccountUpdate);
+  
+  // Subscribe to transaction updates
+  rpc SubscribeTransactionUpdates(SubscribeTransactionUpdatesRequest) returns (stream TransactionUpdate);
+  
+  // Subscribe to slot updates
+  rpc SubscribeSlotUpdates(SubscribeSlotUpdatesRequest) returns (stream SlotUpdate);
+  
+  // Subscribe to block updates
+  rpc SubscribeBlockUpdates(SubscribeBlockUpdatesRequest) returns (stream BlockUpdate);
+  
+  // Ping to keep connection alive
+  rpc Ping(PingRequest) returns (PongResponse);
+}
+
+// Account update subscription request
+message SubscribeAccountUpdatesRequest {
+  repeated string accounts = 1;
+  optional CommitmentLevel commitment = 2;
+  optional bool include_vote_accounts = 3;
+}
+
+// Program update subscription request
+message SubscribeProgramUpdatesRequest {
+  repeated string programs = 1;
+  optional CommitmentLevel commitment = 2;
+  optional bool include_accounts = 3;
+}
+
+// Transaction update subscription request
+message SubscribeTransactionUpdatesRequest {
+  optional CommitmentLevel commitment = 1;
+  optional bool include_vote_transactions = 2;
+  optional bool include_failed_transactions = 3;
+  repeated string account_filters = 4;
+}
+
+// Slot update subscription request
+message SubscribeSlotUpdatesRequest {
+  optional CommitmentLevel commitment = 1;
+}
+
+// Block update subscription request
+message SubscribeBlockUpdatesRequest {
+  optional CommitmentLevel commitment = 1;
+  optional bool include_transactions = 2;
+  optional bool include_accounts = 3;
+}
+
+// Ping request
+message PingRequest {
+  uint64 id = 1;
+}
+
+// Pong response
+message PongResponse {
+  uint64 id = 1;
+}
+
+// Account update message
+message AccountUpdate {
+  string pubkey = 1;
+  uint64 lamports = 2;
+  string owner = 3;
+  bool executable = 4;
+  uint64 rent_epoch = 5;
+  bytes data = 6;
+  uint64 write_version = 7;
+  optional string txn_signature = 8;
+  uint64 slot = 9;
+  bool is_startup = 10;
+}
+
+// Transaction update message
+message TransactionUpdate {
+  string signature = 1;
+  bool is_vote = 2;
+  Transaction transaction = 3;
+  TransactionMeta meta = 4;
+  uint64 slot = 5;
+}
+
+// Slot update message
+message SlotUpdate {
+  uint64 slot = 1;
+  optional uint64 parent = 2;
+  SlotStatus status = 3;
+}
+
+// Block update message
+message BlockUpdate {
+  uint64 slot = 1;
+  string blockhash = 2;
+  repeated TransactionUpdate transactions = 3;
+  repeated AccountUpdate accounts = 4;
+  uint64 block_time = 5;
+  uint64 block_height = 6;
+}
+
+// Transaction metadata
+message TransactionMeta {
+  optional string err = 1;
+  uint64 fee = 2;
+  repeated uint64 pre_balances = 3;
+  repeated uint64 post_balances = 4;
+  repeated InnerInstructions inner_instructions = 5;
+  repeated string log_messages = 6;
+  repeated TokenBalance pre_token_balances = 7;
+  repeated TokenBalance post_token_balances = 8;
+  repeated Reward rewards = 9;
+  optional bytes loaded_addresses = 10;
+}
+
+// Inner instructions
+message InnerInstructions {
+  uint32 index = 1;
+  repeated CompiledInstruction instructions = 2;
+}
+
+// Compiled instruction
+message CompiledInstruction {
+  uint32 program_id_index = 1;
+  bytes accounts = 2;
+  bytes data = 3;
+}
+
+// Token balance
+message TokenBalance {
+  uint32 account_index = 1;
+  string mint = 2;
+  UiTokenAmount ui_token_amount = 3;
+  string owner = 4;
+  string program_id = 5;
+}
+
+// UI token amount
+message UiTokenAmount {
+  string ui_amount_string = 1;
+  uint32 decimals = 2;
+  string amount = 3;
+  optional double ui_amount = 4;
+}
+
+// Reward
+message Reward {
+  string pubkey = 1;
+  int64 lamports = 2;
+  optional uint64 post_balance = 3;
+  optional RewardType reward_type = 4;
+  optional string commission = 5;
+}
+
+// Commitment level
+enum CommitmentLevel {
+  PROCESSED = 0;
+  CONFIRMED = 1;
+  FINALIZED = 2;
+}
+
+// Slot status
+enum SlotStatus {
+  RECEIVED = 0;
+  PROCESSED = 1;
+  ROOTED = 2;
+}
+
+// Reward type
+enum RewardType {
+  FEE = 0;
+  RENT = 1;
+  STAKING = 2;
+  VOTING = 3;
+}

@@ -1,0 +1,115 @@
+[workspace]
+members = [
+    "engine",
+    "programs/flash-arbitrage",
+    "programs/cross-dex-router",
+    "programs/mev-protection",
+]
+resolver = "2"
+
+[workspace.dependencies]
+# Solana and Anchor dependencies
+anchor-lang = "0.29.0"
+anchor-spl = "0.29.0"
+solana-program = "1.17.0"
+solana-sdk = "1.17.0"
+solana-client = "1.17.0"
+solana-rpc-client = "1.17.0"
+solana-rpc-client-api = "1.17.0"
+solana-account-decoder = "1.17.0"
+solana-transaction-status = "1.17.0"
+spl-token = "4.0.0"
+spl-associated-token-account = "2.2.0"
+
+# Async runtime and web framework
+tokio = { version = "1.35.0", features = ["full"] }
+axum = { version = "0.7.0", features = ["ws", "headers", "multipart"] }
+tower = "0.4.13"
+tower-http = { version = "0.5.0", features = ["cors", "trace", "compression-gzip"] }
+hyper = "1.0.0"
+
+# Serialization
+serde = { version = "1.0.193", features = ["derive"] }
+serde_json = "1.0.108"
+bincode = "1.3.3"
+borsh = { version = "0.10.3", features = ["derive"] }
+
+# Database and caching
+tokio-postgres = { version = "0.7.10", features = ["with-chrono-0_4", "with-serde_json-1"] }
+redis = { version = "0.24.0", features = ["tokio-comp", "connection-manager"] }
+sqlx = { version = "0.7.3", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
+
+# Cryptography and hashing
+sha2 = "0.10.8"
+sha3 = "0.10.8"
+blake3 = "1.5.0"
+hmac = "0.12.1"
+base64 = "0.21.5"
+base58 = "0.2.0"
+hex = "0.4.3"
+
+# Numerical computations
+num-bigint = "0.4.4"
+num-traits = "0.2.17"
+rust_decimal = { version = "1.33.1", features = ["serde-with-str"] }
+statrs = "0.16.0"
+
+# Time and date
+chrono = { version = "0.4.31", features = ["serde"] }
+
+# Logging and tracing
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"] }
+log = "0.4.20"
+
+# Error handling
+thiserror = "1.0.50"
+anyhow = "1.0.75"
+
+# Configuration
+config = "0.13.4"
+toml = "0.8.8"
+
+# Utilities
+uuid = { version = "1.6.1", features = ["v4", "serde"] }
+once_cell = "1.19.0"
+lazy_static = "1.4.0"
+futures = "0.3.29"
+futures-util = "0.3.29"
+pin-project = "1.1.3"
+bytes = "1.5.0"
+
+# Networking and HTTP
+reqwest = { version = "0.11.22", features = ["json", "stream"] }
+tungstenite = "0.21.0"
+tokio-tungstenite = "0.21.0"
+url = "2.5.0"
+
+# Metrics and monitoring
+prometheus = "0.13.3"
+sysinfo = "0.30.5"
+
+# Testing
+tokio-test = "0.4.3"
+mockall = "0.12.1"
+
+# DEX SDK dependencies (Jupiter, Raydium, etc.)
+# Note: These would be actual crates in a real implementation
+# jupiter-sdk = "0.1.0"
+# raydium-sdk = "0.1.0"
+# orca-sdk = "0.1.0"
+# meteora-sdk = "0.1.0"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.test]
+opt-level = 1
+debug = true

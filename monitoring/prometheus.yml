@@ -1,0 +1,139 @@
+# Prometheus configuration for DeFi Arbitrage Engine
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'defi-arbitrage-monitor'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - "alert_rules.yml"
+  - "recording_rules.yml"
+
+# A scrape configuration containing exactly one endpoint to scrape:
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # DeFi Arbitrage Engine
+  - job_name: 'arbitrage-engine'
+    static_configs:
+      - targets: ['arbitrage-engine:9091']
+    scrape_interval: 5s
+    metrics_path: /metrics
+    scrape_timeout: 10s
+    honor_labels: true
+    params:
+      format: ['prometheus']
+
+  # Node Exporter for system metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # cAdvisor for container metrics
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # Redis Exporter
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # PostgreSQL/TimescaleDB Exporter
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['timescaledb:5432']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Nginx metrics
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx:80']
+    scrape_interval: 30s
+    metrics_path: /nginx_status
+
+  # Solana RPC metrics (if available)
+  - job_name: 'solana-rpc'
+    static_configs:
+      - targets: ['api.mainnet-beta.solana.com:443']
+    scrape_interval: 60s
+    metrics_path: /metrics
+    scheme: https
+    scrape_timeout: 30s
+
+  # DEX API metrics
+  - job_name: 'dex-apis'
+    static_configs:
+      - targets:
+        - 'api.raydium.io:443'
+        - 'api.orca.so:443'
+        - 'quote-api.jup.ag:443'
+    scrape_interval: 30s
+    metrics_path: /health
+    scheme: https
+    scrape_timeout: 15s
+
+  # Custom application metrics
+  - job_name: 'arbitrage-opportunities'
+    static_configs:
+      - targets: ['arbitrage-engine:9091']
+    scrape_interval: 1s
+    metrics_path: /metrics/opportunities
+    scrape_timeout: 5s
+
+  - job_name: 'arbitrage-trades'
+    static_configs:
+      - targets: ['arbitrage-engine:9091']
+    scrape_interval: 5s
+    metrics_path: /metrics/trades
+    scrape_timeout: 10s
+
+  - job_name: 'arbitrage-performance'
+    static_configs:
+      - targets: ['arbitrage-engine:9091']
+    scrape_interval: 10s
+    metrics_path: /metrics/performance
+    scrape_timeout: 10s
+
+  - job_name: 'arbitrage-risk'
+    static_configs:
+      - targets: ['arbitrage-engine:9091']
+    scrape_interval: 15s
+    metrics_path: /metrics/risk
+    scrape_timeout: 10s
+
+# Remote write configuration (for long-term storage)
+# remote_write:
+#   - url: "https://prometheus-remote-write-endpoint"
+#     basic_auth:
+#       username: "username"
+#       password: "password"
+
+# Remote read configuration
+# remote_read:
+#   - url: "https://prometheus-remote-read-endpoint"
+#     basic_auth:
+#       username: "username"
+#       password: "password"

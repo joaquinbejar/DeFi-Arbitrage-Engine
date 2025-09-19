@@ -1,0 +1,50 @@
+[toolchain]
+anchor_version = "0.31.1"
+
+[features]
+seeds = false
+skip-lint = false
+
+[programs.localnet]
+mev_protection = "MevProtect1111111111111111111111111111111"
+flash_arbitrage = "FlashArb1111111111111111111111111111111111"
+cross_dex_router = "CrossDex1111111111111111111111111111111111"
+
+[programs.devnet]
+mev_protection = "MevProtect1111111111111111111111111111111"
+flash_arbitrage = "FlashArb1111111111111111111111111111111111"
+cross_dex_router = "CrossDex1111111111111111111111111111111111"
+
+[programs.mainnet]
+mev_protection = "MevProtect1111111111111111111111111111111"
+flash_arbitrage = "FlashArb1111111111111111111111111111111111"
+cross_dex_router = "CrossDex1111111111111111111111111111111111"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "Localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+[workspace]
+members = [
+    "programs/mev-protection",
+    "programs/flash-arbitrage", 
+    "programs/cross-dex-router"
+]
+
+[[test.genesis]]
+address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+program = "metadata.so"
+
+[[test.genesis]]
+address = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+program = "spl_token.so"
+
+[[test.genesis]]
+address = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+program = "spl_associated_token_account.so"

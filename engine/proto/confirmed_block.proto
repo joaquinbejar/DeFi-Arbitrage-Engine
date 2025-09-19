@@ -1,0 +1,248 @@
+syntax = "proto3";
+
+package geyser;
+
+import "transaction.proto";
+
+// Confirmed block structure
+message ConfirmedBlock {
+  optional string previous_blockhash = 1;
+  string blockhash = 2;
+  optional uint64 parent_slot = 3;
+  repeated ConfirmedTransaction transactions = 4;
+  repeated Reward rewards = 5;
+  optional UnixTimestamp block_time = 6;
+  optional uint64 block_height = 7;
+}
+
+// Confirmed transaction
+message ConfirmedTransaction {
+  Transaction transaction = 1;
+  optional TransactionStatusMeta meta = 2;
+}
+
+// Transaction status metadata
+message TransactionStatusMeta {
+  optional TransactionError err = 1;
+  uint64 fee = 2;
+  repeated uint64 pre_balances = 3;
+  repeated uint64 post_balances = 4;
+  repeated InnerInstructions inner_instructions = 5;
+  optional bool inner_instructions_none = 10;
+  repeated string log_messages = 6;
+  optional bool log_messages_none = 11;
+  repeated TokenBalance pre_token_balances = 7;
+  repeated TokenBalance post_token_balances = 8;
+  repeated Reward rewards = 9;
+  optional LoadedAddresses loaded_addresses = 12;
+  optional ReturnData return_data = 13;
+  optional uint64 compute_units_consumed = 14;
+}
+
+// Inner instructions
+message InnerInstructions {
+  uint32 index = 1;
+  repeated CompiledInstruction instructions = 2;
+}
+
+// Token balance
+message TokenBalance {
+  uint32 account_index = 1;
+  string mint = 2;
+  UiTokenAmount ui_token_amount = 3;
+  optional string owner = 4;
+  optional string program_id = 5;
+}
+
+// UI token amount
+message UiTokenAmount {
+  string ui_amount_string = 1;
+  uint32 decimals = 2;
+  string amount = 3;
+  optional double ui_amount = 4;
+}
+
+// Reward
+message Reward {
+  string pubkey = 1;
+  int64 lamports = 2;
+  optional uint64 post_balance = 3;
+  optional RewardType reward_type = 4;
+  optional string commission = 5;
+}
+
+// Loaded addresses
+message LoadedAddresses {
+  repeated string writable = 1;
+  repeated string readonly = 2;
+}
+
+// Return data
+message ReturnData {
+  string program_id = 1;
+  bytes data = 2;
+}
+
+// Unix timestamp
+message UnixTimestamp {
+  int64 timestamp = 1;
+}
+
+// Reward type
+enum RewardType {
+  UNSPECIFIED = 0;
+  FEE = 1;
+  RENT = 2;
+  STAKING = 3;
+  VOTING = 4;
+}
+
+// Block commitment
+enum Commitment {
+  PROCESSED = 0;
+  CONFIRMED = 1;
+  FINALIZED = 2;
+}
+
+// Transaction details
+message TransactionDetails {
+  string signature = 1;
+  Transaction transaction = 2;
+  optional TransactionStatusMeta meta = 3;
+  uint64 slot = 4;
+  optional int64 block_time = 5;
+}
+
+// Block production info
+message BlockProductionInfo {
+  uint64 slot = 1;
+  string leader = 2;
+  uint64 total_slots = 3;
+  uint64 blocks_produced = 4;
+  double skip_rate = 5;
+}
+
+// Slot info
+message SlotInfo {
+  uint64 slot = 1;
+  optional uint64 parent = 2;
+  optional uint64 root = 3;
+}
+
+// Account info
+message AccountInfo {
+  string pubkey = 1;
+  uint64 lamports = 2;
+  string owner = 3;
+  bool executable = 4;
+  uint64 rent_epoch = 5;
+  bytes data = 6;
+}
+
+// Program account
+message ProgramAccount {
+  string pubkey = 1;
+  AccountInfo account = 2;
+}
+
+// Supply info
+message Supply {
+  uint64 total = 1;
+  uint64 circulating = 2;
+  uint64 non_circulating = 3;
+  repeated string non_circulating_accounts = 4;
+}
+
+// Epoch info
+message EpochInfo {
+  uint64 epoch = 1;
+  uint64 slot_index = 2;
+  uint64 slots_in_epoch = 3;
+  uint64 absolute_slot = 4;
+  uint64 block_height = 5;
+  uint64 transaction_count = 6;
+}
+
+// Epoch schedule
+message EpochSchedule {
+  uint64 slots_per_epoch = 1;
+  uint64 leader_schedule_slot_offset = 2;
+  bool warmup = 3;
+  uint64 first_normal_epoch = 4;
+  uint64 first_normal_slot = 5;
+}
+
+// Fee calculator
+message FeeCalculator {
+  uint64 lamports_per_signature = 1;
+}
+
+// Fee rate governor
+message FeeRateGovernor {
+  uint64 lamports_per_signature = 1;
+  uint64 max_lamports_per_signature = 2;
+  uint64 min_lamports_per_signature = 3;
+  uint64 ratio_denominator = 4;
+  uint64 ratio_numerator = 5;
+}
+
+// Inflation governor
+message InflationGovernor {
+  double initial = 1;
+  double terminal = 2;
+  double taper = 3;
+  double foundation = 4;
+  uint64 foundation_term = 5;
+}
+
+// Inflation rate
+message InflationRate {
+  double total = 1;
+  double validator = 2;
+  double foundation = 3;
+  uint64 epoch = 4;
+}
+
+// Performance sample
+message PerfSample {
+  uint64 slot = 1;
+  uint64 num_transactions = 2;
+  uint64 num_slots = 3;
+  uint64 sample_period_secs = 4;
+}
+
+// Version info
+message Version {
+  string solana_core = 1;
+  optional uint64 feature_set = 2;
+}
+
+// Vote account info
+message VoteAccountInfo {
+  string vote_pubkey = 1;
+  string node_pubkey = 2;
+  uint64 activated_stake = 3;
+  bool epoch_vote_account = 4;
+  repeated EpochCredits epoch_credits = 5;
+  uint64 commission = 6;
+  uint64 last_vote = 7;
+  optional string root_slot = 8;
+}
+
+// Epoch credits
+message EpochCredits {
+  uint64 epoch = 1;
+  uint64 credits = 2;
+  uint64 prev_credits = 3;
+}
+
+// Cluster node
+message ClusterNode {
+  string pubkey = 1;
+  optional string gossip = 2;
+  optional string tpu = 3;
+  optional string rpc = 4;
+  optional string version = 5;
+  optional uint64 feature_set = 6;
+  optional uint64 shred_version = 7;
+}

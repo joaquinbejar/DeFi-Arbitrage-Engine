@@ -1,0 +1,48 @@
+# Grafana dashboards provisioning configuration
+
+apiVersion: 1
+
+providers:
+  # Main dashboards folder
+  - name: 'DeFi Arbitrage Dashboards'
+    orgId: 1
+    folder: 'DeFi Arbitrage'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+
+  # System monitoring dashboards
+  - name: 'System Monitoring'
+    orgId: 1
+    folder: 'System'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/system
+
+  # Application monitoring dashboards
+  - name: 'Application Monitoring'
+    orgId: 1
+    folder: 'Application'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/application
+
+  # Business metrics dashboards
+  - name: 'Business Metrics'
+    orgId: 1
+    folder: 'Business'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards/business
