@@ -1,336 +1,286 @@
--- Initial schema for Solana DeFi Arbitrage Engine
--- TimescaleDB migration
+-- TimescaleDB Migration for DeFi Arbitrage Engine
+-- This schema is optimized for time-series data and high-frequency trading operations
 
 -- Enable TimescaleDB extension
-CREATE EXTENSION IF NOT EXISTS timescaledb;
+CREATE EXTENSION IF NOT EXISTS timescaledb CASCADE;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Create custom types
-CREATE TYPE opportunity_type AS ENUM ('direct', 'triangular', 'cross_dex');
-CREATE TYPE trade_action AS ENUM ('buy', 'sell', 'swap');
-CREATE TYPE trade_status AS ENUM ('pending', 'executing', 'completed', 'failed', 'cancelled');
-CREATE TYPE dex_type AS ENUM ('raydium', 'orca', 'meteora', 'jupiter');
+-- Custom types for better data modeling
+CREATE TYPE dex_type AS ENUM ('uniswap_v2', 'uniswap_v3', 'sushiswap', 'pancakeswap', 'raydium', 'orca', 'serum');
+CREATE TYPE opportunity_status AS ENUM ('detected', 'executing', 'completed', 'failed', 'expired');
+CREATE TYPE transaction_status AS ENUM ('pending', 'confirmed', 'failed', 'reverted');
+CREATE TYPE arbitrage_type AS ENUM ('triangular', 'cross_dex', 'flash_loan');
 
--- Tokens table
+-- Users table for authentication and tracking
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    wallet_address VARCHAR(44) UNIQUE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    is_active BOOLEAN DEFAULT true,
+    settings JSONB DEFAULT '{}'
+);
+
+-- Tokens table with comprehensive token information
 CREATE TABLE tokens (
-    id SERIAL PRIMARY KEY,
-    mint_address VARCHAR(44) UNIQUE NOT NULL,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     symbol VARCHAR(20) NOT NULL,
     name VARCHAR(100) NOT NULL,
+    mint_address VARCHAR(44) UNIQUE NOT NULL,
     decimals INTEGER NOT NULL,
-    logo_uri TEXT,
+    chain_id INTEGER NOT NULL,
     coingecko_id VARCHAR(100),
-    is_active BOOLEAN DEFAULT true,
+    logo_uri TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    is_active BOOLEAN DEFAULT true
 );
 
--- Create indexes for tokens
-CREATE INDEX idx_tokens_mint_address ON tokens(mint_address);
-CREATE INDEX idx_tokens_symbol ON tokens(symbol);
-CREATE INDEX idx_tokens_active ON tokens(is_active);
-
--- DEX pools table
+-- DEX pools with time-series capabilities
 CREATE TABLE dex_pools (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    dex_type dex_type NOT NULL,
     pool_address VARCHAR(44) UNIQUE NOT NULL,
-    dex dex_type NOT NULL,
-    token_a_mint VARCHAR(44) NOT NULL,
-    token_b_mint VARCHAR(44) NOT NULL,
-    token_a_reserve DECIMAL(20, 6) NOT NULL DEFAULT 0,
-    token_b_reserve DECIMAL(20, 6) NOT NULL DEFAULT 0,
-    fee_rate DECIMAL(8, 6) NOT NULL DEFAULT 0,
-    liquidity DECIMAL(20, 6) NOT NULL DEFAULT 0,
-    volume_24h DECIMAL(20, 6) DEFAULT 0,
-    is_active BOOLEAN DEFAULT true,
+    token_a_id UUID REFERENCES tokens(id),
+    token_b_id UUID REFERENCES tokens(id),
+    fee_tier INTEGER,
+    liquidity NUMERIC(36, 18),
+    sqrt_price_x96 NUMERIC(78, 0),
+    tick INTEGER,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    is_active BOOLEAN DEFAULT true
 );
 
--- Create indexes for dex_pools
-CREATE INDEX idx_dex_pools_address ON dex_pools(pool_address);
-CREATE INDEX idx_dex_pools_dex ON dex_pools(dex);
-CREATE INDEX idx_dex_pools_tokens ON dex_pools(token_a_mint, token_b_mint);
-CREATE INDEX idx_dex_pools_active ON dex_pools(is_active);
-CREATE INDEX idx_dex_pools_liquidity ON dex_pools(liquidity DESC);
-
--- Price feeds table (time-series)
-CREATE TABLE price_feeds (
+-- Price data as hypertable for time-series optimization
+CREATE TABLE price_data (
     time TIMESTAMPTZ NOT NULL,
-    token_mint VARCHAR(44) NOT NULL,
-    price DECIMAL(20, 8) NOT NULL,
-    volume_24h DECIMAL(20, 6) DEFAULT 0,
-    market_cap DECIMAL(20, 2) DEFAULT 0,
-    source VARCHAR(50) NOT NULL,
-    PRIMARY KEY (time, token_mint, source)
+    token_id UUID NOT NULL REFERENCES tokens(id),
+    pool_id UUID NOT NULL REFERENCES dex_pools(id),
+    price NUMERIC(36, 18) NOT NULL,
+    volume_24h NUMERIC(36, 18),
+    liquidity NUMERIC(36, 18),
+    market_cap NUMERIC(36, 18),
+    price_change_24h NUMERIC(10, 4)
 );
 
--- Convert price_feeds to hypertable
-SELECT create_hypertable('price_feeds', 'time');
+-- Convert to hypertable
+SELECT create_hypertable('price_data', 'time');
 
--- Create indexes for price_feeds
-CREATE INDEX idx_price_feeds_token ON price_feeds(token_mint, time DESC);
-CREATE INDEX idx_price_feeds_source ON price_feeds(source, time DESC);
-
--- Arbitrage opportunities table (time-series)
+-- Arbitrage opportunities with time-series tracking
 CREATE TABLE arbitrage_opportunities (
-    time TIMESTAMPTZ NOT NULL,
-    id UUID NOT NULL,
-    opportunity_type opportunity_type NOT NULL,
-    token_in VARCHAR(44) NOT NULL,
-    token_out VARCHAR(44) NOT NULL,
-    amount_in DECIMAL(20, 6) NOT NULL,
-    expected_amount_out DECIMAL(20, 6) NOT NULL,
-    profit_amount DECIMAL(20, 6) NOT NULL,
-    profit_percentage DECIMAL(8, 4) NOT NULL,
-    gas_cost DECIMAL(20, 6) NOT NULL,
-    net_profit DECIMAL(20, 6) NOT NULL,
-    dex_path TEXT[] NOT NULL,
-    pool_addresses TEXT[] NOT NULL,
-    price_impact DECIMAL(8, 4) NOT NULL,
-    confidence_score DECIMAL(4, 2) NOT NULL,
-    is_executed BOOLEAN DEFAULT false,
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    arbitrage_type arbitrage_type NOT NULL,
+    token_path UUID[] NOT NULL,
+    dex_path dex_type[] NOT NULL,
+    pool_path UUID[] NOT NULL,
+    profit_estimate NUMERIC(36, 18) NOT NULL,
+    profit_percentage NUMERIC(10, 4) NOT NULL,
+    gas_cost NUMERIC(36, 18),
+    net_profit NUMERIC(36, 18),
+    status opportunity_status DEFAULT 'detected',
     execution_time TIMESTAMPTZ,
+    block_number BIGINT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    PRIMARY KEY (time, id)
+    expires_at TIMESTAMPTZ
 );
 
--- Convert arbitrage_opportunities to hypertable
+-- Convert to hypertable
 SELECT create_hypertable('arbitrage_opportunities', 'time');
 
--- Create indexes for arbitrage_opportunities
-CREATE INDEX idx_opportunities_type ON arbitrage_opportunities(opportunity_type, time DESC);
-CREATE INDEX idx_opportunities_profit ON arbitrage_opportunities(profit_percentage DESC, time DESC);
-CREATE INDEX idx_opportunities_executed ON arbitrage_opportunities(is_executed, time DESC);
-CREATE INDEX idx_opportunities_tokens ON arbitrage_opportunities(token_in, token_out, time DESC);
-
--- Trades table (time-series)
-CREATE TABLE trades (
-    time TIMESTAMPTZ NOT NULL,
-    id UUID NOT NULL,
-    opportunity_id UUID,
-    signature VARCHAR(88) UNIQUE NOT NULL,
-    status trade_status NOT NULL DEFAULT 'pending',
-    dex dex_type NOT NULL,
-    action trade_action NOT NULL,
-    token_in VARCHAR(44) NOT NULL,
-    token_out VARCHAR(44) NOT NULL,
-    amount_in DECIMAL(20, 6) NOT NULL,
-    amount_out DECIMAL(20, 6),
-    expected_amount_out DECIMAL(20, 6) NOT NULL,
-    slippage DECIMAL(8, 4),
-    gas_used DECIMAL(20, 6),
-    gas_price DECIMAL(20, 6),
-    profit_loss DECIMAL(20, 6),
+-- Transaction tracking
+CREATE TABLE transactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    opportunity_id UUID REFERENCES arbitrage_opportunities(id),
+    user_id UUID REFERENCES users(id),
+    transaction_hash VARCHAR(128) UNIQUE,
+    status transaction_status DEFAULT 'pending',
+    gas_used BIGINT,
+    gas_price NUMERIC(36, 18),
+    actual_profit NUMERIC(36, 18),
+    slippage NUMERIC(10, 4),
     execution_time_ms INTEGER,
-    block_slot BIGINT,
-    error_message TEXT,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    completed_at TIMESTAMPTZ,
-    PRIMARY KEY (time, id)
+    block_number BIGINT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Convert trades to hypertable
-SELECT create_hypertable('trades', 'time');
+-- Convert to hypertable
+SELECT create_hypertable('transactions', 'time');
 
--- Create indexes for trades
-CREATE INDEX idx_trades_signature ON trades(signature);
-CREATE INDEX idx_trades_status ON trades(status, time DESC);
-CREATE INDEX idx_trades_opportunity ON trades(opportunity_id, time DESC);
-CREATE INDEX idx_trades_dex ON trades(dex, time DESC);
-CREATE INDEX idx_trades_tokens ON trades(token_in, token_out, time DESC);
-CREATE INDEX idx_trades_profit ON trades(profit_loss DESC, time DESC) WHERE profit_loss IS NOT NULL;
-
--- Performance metrics table (time-series)
+-- Performance metrics tracking
 CREATE TABLE performance_metrics (
-    time TIMESTAMPTZ NOT NULL,
+    time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     metric_name VARCHAR(100) NOT NULL,
-    metric_value DECIMAL(20, 6) NOT NULL,
+    metric_value NUMERIC(36, 18) NOT NULL,
     tags JSONB DEFAULT '{}',
-    PRIMARY KEY (time, metric_name)
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Convert performance_metrics to hypertable
+-- Convert to hypertable
 SELECT create_hypertable('performance_metrics', 'time');
 
--- Create indexes for performance_metrics
-CREATE INDEX idx_performance_metrics_name ON performance_metrics(metric_name, time DESC);
-CREATE INDEX idx_performance_metrics_tags ON performance_metrics USING GIN(tags);
-
--- Wallet balances table (time-series)
-CREATE TABLE wallet_balances (
-    time TIMESTAMPTZ NOT NULL,
-    wallet_address VARCHAR(44) NOT NULL,
-    token_mint VARCHAR(44) NOT NULL,
-    balance DECIMAL(20, 6) NOT NULL,
-    usd_value DECIMAL(20, 2),
-    PRIMARY KEY (time, wallet_address, token_mint)
-);
-
--- Convert wallet_balances to hypertable
-SELECT create_hypertable('wallet_balances', 'time');
-
--- Create indexes for wallet_balances
-CREATE INDEX idx_wallet_balances_address ON wallet_balances(wallet_address, time DESC);
-CREATE INDEX idx_wallet_balances_token ON wallet_balances(token_mint, time DESC);
-
--- System logs table (time-series)
-CREATE TABLE system_logs (
-    time TIMESTAMPTZ NOT NULL,
-    level VARCHAR(10) NOT NULL,
-    component VARCHAR(50) NOT NULL,
-    message TEXT NOT NULL,
-    metadata JSONB DEFAULT '{}',
-    PRIMARY KEY (time, component)
-);
-
--- Convert system_logs to hypertable
-SELECT create_hypertable('system_logs', 'time');
-
--- Create indexes for system_logs
-CREATE INDEX idx_system_logs_level ON system_logs(level, time DESC);
-CREATE INDEX idx_system_logs_component ON system_logs(component, time DESC);
-CREATE INDEX idx_system_logs_metadata ON system_logs USING GIN(metadata);
-
--- Configuration table
-CREATE TABLE configuration (
-    id SERIAL PRIMARY KEY,
+-- System configuration
+CREATE TABLE system_config (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     key VARCHAR(100) UNIQUE NOT NULL,
     value JSONB NOT NULL,
     description TEXT,
-    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Create index for configuration
-CREATE INDEX idx_configuration_key ON configuration(key);
-CREATE INDEX idx_configuration_active ON configuration(is_active);
+-- Indexes for optimal query performance
+CREATE INDEX idx_tokens_symbol ON tokens(symbol);
+CREATE INDEX idx_tokens_mint_address ON tokens(mint_address);
+CREATE INDEX idx_dex_pools_tokens ON dex_pools(token_a_id, token_b_id);
+CREATE INDEX idx_dex_pools_dex_type ON dex_pools(dex_type);
+CREATE INDEX idx_price_data_token_time ON price_data(token_id, time DESC);
+CREATE INDEX idx_arbitrage_opportunities_status ON arbitrage_opportunities(status);
+CREATE INDEX idx_arbitrage_opportunities_profit ON arbitrage_opportunities(profit_percentage DESC);
+CREATE INDEX idx_transactions_user ON transactions(user_id);
+CREATE INDEX idx_transactions_opportunity ON transactions(opportunity_id);
+CREATE INDEX idx_performance_metrics_name_time ON performance_metrics(metric_name, time DESC);
 
--- Insert default tokens
-INSERT INTO tokens (mint_address, symbol, name, decimals, coingecko_id) VALUES
-('So11111111111111111111111111111111111111112', 'SOL', 'Solana', 9, 'solana'),
-('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', 'USDC', 'USD Coin', 6, 'usd-coin'),
-('Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', 'USDT', 'Tether USD', 6, 'tether'),
-('4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R', 'RAY', 'Raydium', 6, 'raydium'),
-('orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE', 'ORCA', 'Orca', 6, 'orca'),
-('SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt', 'SRM', 'Serum', 6, 'serum'),
-('mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So', 'mSOL', 'Marinade Staked SOL', 9, 'marinade-staked-sol'),
-('7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj', 'stSOL', 'Lido Staked SOL', 9, 'lido-staked-sol');
-
--- Insert default configuration
-INSERT INTO configuration (key, value, description) VALUES
-('max_position_size', '10000.0', 'Maximum position size in USD'),
-('min_profit_threshold', '0.005', 'Minimum profit threshold (0.5%)'),
-('max_slippage', '0.01', 'Maximum allowed slippage (1%)'),
-('gas_price_multiplier', '1.2', 'Gas price multiplier for priority'),
-('max_concurrent_trades', '5', 'Maximum concurrent trades'),
-('circuit_breaker_enabled', 'true', 'Enable circuit breaker'),
-('max_daily_loss', '1000.0', 'Maximum daily loss in USD'),
-('risk_score_threshold', '0.7', 'Minimum risk score for execution');
-
--- Create materialized views for analytics
-CREATE MATERIALIZED VIEW hourly_trading_stats AS
+-- Materialized views for analytics
+CREATE MATERIALIZED VIEW hourly_price_summary AS
 SELECT 
     time_bucket('1 hour', time) AS hour,
-    COUNT(*) AS total_trades,
-    COUNT(*) FILTER (WHERE status = 'completed') AS successful_trades,
-    COUNT(*) FILTER (WHERE status = 'failed') AS failed_trades,
-    AVG(profit_loss) FILTER (WHERE profit_loss IS NOT NULL) AS avg_profit,
-    SUM(profit_loss) FILTER (WHERE profit_loss IS NOT NULL) AS total_profit,
-    AVG(execution_time_ms) FILTER (WHERE execution_time_ms IS NOT NULL) AS avg_execution_time
-FROM trades
-GROUP BY hour
-ORDER BY hour DESC;
+    token_id,
+    FIRST(price, time) AS open_price,
+    MAX(price) AS high_price,
+    MIN(price) AS low_price,
+    LAST(price, time) AS close_price,
+    AVG(price) AS avg_price,
+    SUM(volume_24h) AS total_volume
+FROM price_data
+GROUP BY hour, token_id;
 
--- Create index for materialized view
-CREATE INDEX idx_hourly_trading_stats_hour ON hourly_trading_stats(hour DESC);
-
--- Create materialized view for opportunity analytics
-CREATE MATERIALIZED VIEW hourly_opportunity_stats AS
+CREATE MATERIALIZED VIEW daily_arbitrage_summary AS
 SELECT 
-    time_bucket('1 hour', time) AS hour,
-    opportunity_type,
+    time_bucket('1 day', time) AS day,
+    arbitrage_type,
     COUNT(*) AS total_opportunities,
-    COUNT(*) FILTER (WHERE is_executed = true) AS executed_opportunities,
+    COUNT(*) FILTER (WHERE status = 'completed') AS successful_opportunities,
     AVG(profit_percentage) AS avg_profit_percentage,
-    AVG(confidence_score) AS avg_confidence_score,
-    AVG(price_impact) AS avg_price_impact
+    SUM(net_profit) FILTER (WHERE status = 'completed') AS total_profit
 FROM arbitrage_opportunities
-GROUP BY hour, opportunity_type
-ORDER BY hour DESC, opportunity_type;
+GROUP BY day, arbitrage_type;
 
--- Create index for opportunity stats
-CREATE INDEX idx_hourly_opportunity_stats_hour ON hourly_opportunity_stats(hour DESC, opportunity_type);
-
--- Create function to refresh materialized views
-CREATE OR REPLACE FUNCTION refresh_analytics_views()
-RETURNS void AS $$
-BEGIN
-    REFRESH MATERIALIZED VIEW CONCURRENTLY hourly_trading_stats;
-    REFRESH MATERIALIZED VIEW CONCURRENTLY hourly_opportunity_stats;
-END;
-$$ LANGUAGE plpgsql;
-
--- Create function to clean old data
-CREATE OR REPLACE FUNCTION cleanup_old_data(retention_days INTEGER DEFAULT 30)
-RETURNS void AS $$
-BEGIN
-    -- Clean old price feeds (keep 30 days)
-    DELETE FROM price_feeds WHERE time < NOW() - INTERVAL '1 day' * retention_days;
-    
-    -- Clean old system logs (keep 7 days)
-    DELETE FROM system_logs WHERE time < NOW() - INTERVAL '7 days';
-    
-    -- Clean old performance metrics (keep 30 days)
-    DELETE FROM performance_metrics WHERE time < NOW() - INTERVAL '1 day' * retention_days;
-    
-    -- Archive old opportunities (keep 90 days)
-    DELETE FROM arbitrage_opportunities WHERE time < NOW() - INTERVAL '90 days';
-    
-    -- Archive old trades (keep 90 days)
-    DELETE FROM trades WHERE time < NOW() - INTERVAL '90 days';
-END;
-$$ LANGUAGE plpgsql;
-
--- Create function to update token prices
-CREATE OR REPLACE FUNCTION update_token_price(
-    p_token_mint VARCHAR(44),
-    p_price DECIMAL(20, 8),
-    p_volume_24h DECIMAL(20, 6) DEFAULT 0,
-    p_market_cap DECIMAL(20, 2) DEFAULT 0,
-    p_source VARCHAR(50) DEFAULT 'api'
-)
-RETURNS void AS $$
-BEGIN
-    INSERT INTO price_feeds (time, token_mint, price, volume_24h, market_cap, source)
-    VALUES (NOW(), p_token_mint, p_price, p_volume_24h, p_market_cap, p_source)
-    ON CONFLICT (time, token_mint, source) DO UPDATE SET
-        price = EXCLUDED.price,
-        volume_24h = EXCLUDED.volume_24h,
-        market_cap = EXCLUDED.market_cap;
-END;
-$$ LANGUAGE plpgsql;
-
--- Create trigger to update updated_at timestamp
+-- Functions for data management
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ language 'plpgsql';
 
--- Apply triggers to tables with updated_at column
+-- Triggers for automatic timestamp updates
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_tokens_updated_at BEFORE UPDATE ON tokens
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_dex_pools_updated_at BEFORE UPDATE ON dex_pools
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_configuration_updated_at BEFORE UPDATE ON configuration
+CREATE TRIGGER update_system_config_updated_at BEFORE UPDATE ON system_config
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Grant permissions to application user (adjust username as needed)
--- GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO arbitrage_user;
--- GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO arbitrage_user;
--- GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO arbitrage_user;
+-- Function to calculate arbitrage profit
+CREATE OR REPLACE FUNCTION calculate_arbitrage_profit(
+    input_amount NUMERIC,
+    token_path UUID[],
+    pool_path UUID[]
+) RETURNS NUMERIC AS $$
+DECLARE
+    current_amount NUMERIC := input_amount;
+    i INTEGER;
+    pool_liquidity NUMERIC;
+BEGIN
+    FOR i IN 1..array_length(pool_path, 1) LOOP
+        SELECT liquidity INTO pool_liquidity
+        FROM dex_pools
+        WHERE id = pool_path[i];
+        
+        -- Simplified AMM calculation (would need more complex logic for real implementation)
+        current_amount := current_amount * 0.997; -- 0.3% fee
+    END LOOP;
+    
+    RETURN current_amount - input_amount;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Data retention policies
+SELECT add_retention_policy('price_data', INTERVAL '30 days');
+SELECT add_retention_policy('performance_metrics', INTERVAL '90 days');
+
+-- Continuous aggregates for real-time analytics
+CREATE MATERIALIZED VIEW price_data_1min
+WITH (timescaledb.continuous) AS
+SELECT 
+    time_bucket('1 minute', time) AS bucket,
+    token_id,
+    pool_id,
+    FIRST(price, time) AS open,
+    MAX(price) AS high,
+    MIN(price) AS low,
+    LAST(price, time) AS close,
+    AVG(price) AS avg_price
+FROM price_data
+GROUP BY bucket, token_id, pool_id;
+
+-- Refresh policies for materialized views
+SELECT add_continuous_aggregate_policy('price_data_1min',
+    start_offset => INTERVAL '1 hour',
+    end_offset => INTERVAL '1 minute',
+    schedule_interval => INTERVAL '1 minute');
+
+-- Insert default tokens
+INSERT INTO tokens (symbol, name, mint_address, decimals, chain_id) VALUES
+('SOL', 'Solana', 'So11111111111111111111111111111111111111112', 9, 101),
+('USDC', 'USD Coin', 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', 6, 101),
+('USDT', 'Tether USD', 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', 6, 101),
+('RAY', 'Raydium', '4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R', 6, 101),
+('SRM', 'Serum', 'SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt', 6, 101);
+
+-- Insert default system configuration
+INSERT INTO system_config (key, value, description) VALUES
+('max_slippage', '0.01', 'Maximum allowed slippage percentage'),
+('min_profit_threshold', '0.005', 'Minimum profit threshold percentage'),
+('gas_price_multiplier', '1.2', 'Gas price multiplier for faster execution'),
+('max_position_size', '1000', 'Maximum position size in USD'),
+('execution_timeout', '30', 'Execution timeout in seconds');
+
+-- Grant permissions
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO anon;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO anon;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO anon;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO authenticated;
+
+-- Enable row level security
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE arbitrage_opportunities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+
+-- RLS policies
+CREATE POLICY "Users can view own data" ON users
+    FOR ALL USING (auth.uid()::text = id::text);
+
+CREATE POLICY "Users can view own opportunities" ON arbitrage_opportunities
+    FOR ALL USING (true); -- Allow all for now, can be restricted later
+
+CREATE POLICY "Users can view own transactions" ON transactions
+    FOR ALL USING (auth.uid()::text = user_id::text);
+
+-- Comments for documentation
+COMMENT ON TABLE price_data IS 'Time-series price data optimized with TimescaleDB hypertables';
+COMMENT ON TABLE arbitrage_opportunities IS 'Detected arbitrage opportunities with profit calculations';
+COMMENT ON TABLE transactions IS 'Transaction execution tracking and results';
+COMMENT ON FUNCTION calculate_arbitrage_profit IS 'Calculates potential arbitrage profit for given token and pool path';
