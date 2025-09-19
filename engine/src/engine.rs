@@ -101,7 +101,9 @@ impl ArbitrageEngine {
 /// Engine status information
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct EngineStatus {
+    /// Whether the engine is currently running
     pub running: bool,
+    /// Engine uptime in seconds
     pub uptime: u64,
 }
 

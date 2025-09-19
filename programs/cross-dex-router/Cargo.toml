@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "Cross-DEX router program for multi-hop arbitrage optimization"
 edition = "2021"
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(anchor_debug)'] }
+
 [lib]
 crate-type = ["cdylib", "lib"]
 name = "cross_dex_router"

@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "MEV protection program for sandwich attack prevention and transaction ordering"
 edition = "2021"
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(anchor_debug)'] }
+
 [lib]
 crate-type = ["cdylib", "lib"]
 name = "mev_protection"

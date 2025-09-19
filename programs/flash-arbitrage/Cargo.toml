@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "Flash arbitrage program for atomic cross-DEX arbitrage execution"
 edition = "2021"
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(anchor_debug)'] }
+
 [lib]
 crate-type = ["cdylib", "lib"]
 name = "flash_arbitrage"

@@ -7,52 +7,81 @@ use std::env;
 /// Main configuration structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+    /// Server configuration settings
     pub server: ServerConfig,
+    /// Database connection configuration
     pub database: DatabaseConfig,
+    /// Redis cache configuration
     pub redis: RedisConfig,
+    /// Solana blockchain configuration
     pub solana: SolanaConfig,
+    /// Arbitrage strategy configuration
     pub arbitrage: ArbitrageConfig,
+    /// Logging configuration
     pub logging: LoggingConfig,
 }
 
+/// Server configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ServerConfig {
+    /// Server host address
     pub host: String,
+    /// Server port number
     pub port: u16,
+    /// Number of worker threads
     pub workers: usize,
 }
 
+/// Database configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DatabaseConfig {
+    /// Database connection URL
     pub url: String,
+    /// Maximum number of database connections
     pub max_connections: u32,
+    /// Minimum number of database connections
     pub min_connections: u32,
 }
 
+/// Redis cache configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RedisConfig {
+    /// Redis connection URL
     pub url: String,
+    /// Maximum number of Redis connections
     pub max_connections: u32,
 }
 
+/// Solana blockchain configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SolanaConfig {
+    /// Solana RPC endpoint URL
     pub rpc_url: String,
+    /// Solana WebSocket endpoint URL
     pub ws_url: String,
+    /// Transaction commitment level
     pub commitment: String,
 }
 
+/// Arbitrage strategy configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ArbitrageConfig {
+    /// Minimum profit threshold to execute trades
     pub min_profit_threshold: f64,
+    /// Maximum acceptable slippage percentage
     pub max_slippage: f64,
+    /// Maximum acceptable price impact percentage
     pub max_price_impact: f64,
+    /// Trade execution timeout in seconds
     pub execution_timeout: u64,
 }
 
+/// Logging configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LoggingConfig {
+    /// Log level (debug, info, warn, error)
     pub level: String,
+    /// Log output format (json, plain)
     pub format: String,
 }
 
