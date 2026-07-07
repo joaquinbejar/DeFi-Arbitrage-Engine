@@ -1,5 +1,5 @@
 # Multi-stage build for optimized production image
-FROM rust:1.89-slim as builder
+FROM rust:1.96.1-slim as builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
