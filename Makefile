@@ -54,6 +54,12 @@ check: test fmt-check lint
 run:
 	cargo run
 
+# Apply database migrations to the TimescaleDB container
+# (started with: docker compose -f Docker/docker-compose.yml up -d timescaledb)
+.PHONY: migrate
+migrate:
+	docker exec -i arbitrage-timescaledb psql -U arbitrage_user -d arbitrage_db -v ON_ERROR_STOP=1 < migrations/001_initial_schema.sql
+
 .PHONY: fix
 fix:
 	cargo fix --allow-staged --allow-dirty

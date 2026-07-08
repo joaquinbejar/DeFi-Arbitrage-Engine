@@ -1,20 +1,18 @@
-version: '3.8'
-
 services:
   # TimescaleDB for historical data storage
   timescaledb:
     image: timescale/timescaledb:latest-pg15
     container_name: arbitrage-timescaledb
     environment:
-      TIMESCALEDB_DB: arbitrage_db
-      TIMESCALEDB_USER: arbitrage_user
-      TIMESCALEDB_PASSWORD: arbitrage_password
+      POSTGRES_DB: arbitrage_db
+      POSTGRES_USER: arbitrage_user
+      POSTGRES_PASSWORD: arbitrage_password
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d
+      - ../migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_initial_schema.sql:ro
     command: >
       postgres
       -c shared_preload_libraries=timescaledb

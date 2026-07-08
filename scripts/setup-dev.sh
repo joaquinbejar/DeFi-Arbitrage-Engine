@@ -14,8 +14,8 @@ NC='\033[0m' # No Color
 
 # Configuration
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SOLANA_VERSION="1.18.8"
-ANCHOR_VERSION="0.29.0"
+SOLANA_VERSION="2.1.0"
+ANCHOR_VERSION="0.31.1"
 RUST_VERSION="1.89.0"
 NODE_VERSION="20"
 
@@ -81,7 +81,9 @@ install_system_deps() {
     if [ "$OS" = "macos" ]; then
         # macOS dependencies
         brew update
-        brew install curl git pkg-config openssl libuv cmake llvm timescaledb redis
+        # TimescaleDB itself runs in Docker; the host only needs the psql client (libpq)
+        brew install curl git pkg-config openssl libuv cmake llvm libpq redis
+        brew link --force libpq || log_warning "Could not link libpq; add \$(brew --prefix libpq)/bin to PATH for psql"
         
         # Install Docker Desktop if not present
         if ! command_exists docker; then
@@ -92,10 +94,13 @@ install_system_deps() {
         # Linux dependencies
         if command_exists apt-get; then
             sudo apt-get update
-            sudo apt-get install -y curl git build-essential pkg-config libssl-dev libuv1-dev cmake llvm-dev libclang-dev timescaledb-client redis-tools docker.io docker-compose
+            # TimescaleDB itself runs in Docker; the host only needs the psql client
+            sudo apt-get install -y curl git build-essential pkg-config libssl-dev libuv1-dev cmake llvm-dev libclang-dev postgresql-client redis-tools docker.io
+            # Compose: v2 plugin on newer Ubuntu, standalone binary on older
+            sudo apt-get install -y docker-compose-v2 || sudo apt-get install -y docker-compose
         elif command_exists yum; then
             sudo yum update -y
-            sudo yum install -y curl git gcc gcc-c++ pkgconfig openssl-devel libuv-devel cmake llvm-devel clang-devel timescaledb redis docker docker-compose
+            sudo yum install -y curl git gcc gcc-c++ pkgconfig openssl-devel libuv-devel cmake llvm-devel clang-devel postgresql redis docker docker-compose
         else
             error_exit "Unsupported Linux distribution. Please install dependencies manually."
         fi
@@ -124,8 +129,10 @@ install_rust() {
     rustup target add wasm32-unknown-unknown
     
     # Install cargo tools
+    # sqlx-cli must be installed separately: --features only applies to a single crate
     log_info "Installing cargo tools..."
-    cargo install --force cargo-watch cargo-edit cargo-audit sqlx-cli --features postgres
+    cargo install --force cargo-watch cargo-edit cargo-audit
+    cargo install --force sqlx-cli --no-default-features --features native-tls,postgres
 }
 
 # Install Node.js
@@ -154,7 +161,7 @@ install_nodejs() {
 install_solana() {
     if ! command_exists solana; then
         log_info "Installing Solana CLI..."
-        sh -c "$(curl -sSfL https://release.solana.com/v${SOLANA_VERSION}/install)"
+        sh -c "$(curl -sSfL https://release.anza.xyz/v${SOLANA_VERSION}/install)"
         
         # Add to PATH
         export PATH="$HOME/.local/share/solana/install/active_release/bin:$PATH"
@@ -202,34 +209,7 @@ setup_project() {
     # Copy environment template if it doesn't exist
     if [ ! -f ".env" ]; then
         log_info "Creating .env file from template..."
-        cat > .env << EOF
-# Database Configuration
-DATABASE_URL=timescaledb://arbitrage_user:arbitrage_pass@localhost:5432/arbitrage_db
-REDIS_URL=redis://localhost:6379
-
-# Solana Configuration
-SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
-SOLANA_WS_URL=wss://api.mainnet-beta.solana.com
-SOLANA_PRIVATE_KEY_PATH=/path/to/your/keypair.json
-
-# DEX Configuration
-JUPITER_API_URL=https://quote-api.jup.ag/v6
-RAYDIUM_API_URL=https://api.raydium.io/v2
-ORCA_API_URL=https://api.orca.so
-
-# Trading Configuration
-MAX_SLIPPAGE=0.01
-MIN_PROFIT_THRESHOLD=0.001
-MAX_POSITION_SIZE=1000
-
-# Monitoring
-PROMETHEUS_PORT=9090
-GRAFANA_PORT=3000
-
-# Development
-RUST_LOG=info
-RUST_BACKTRACE=1
-EOF
+        cp .env.example .env
         log_success ".env file created"
     fi
     
@@ -249,30 +229,37 @@ EOF
     log_success "Project setup completed"
 }
 
+# Compose wrapper: prefer the v2 plugin, fall back to the standalone binary
+compose() {
+    if docker compose version >/dev/null 2>&1; then
+        docker compose -f "$PROJECT_ROOT/Docker/docker-compose.yml" "$@"
+    else
+        docker-compose -f "$PROJECT_ROOT/Docker/docker-compose.yml" "$@"
+    fi
+}
+
 # Start development services
 start_services() {
     log_info "Starting development services..."
-    
+
     # Check if Docker is running
     if ! docker info >/dev/null 2>&1; then
         log_warning "Docker is not running. Please start Docker and run this script again."
         return 1
     fi
-    
+
     # Start services with Docker Compose
-    docker-compose up -d timescaledb redis prometheus grafana
-    
+    compose up -d timescaledb redis prometheus grafana
+
     # Wait for services to be ready
     log_info "Waiting for services to be ready..."
     sleep 10
-    
+
     # Run database migrations
     log_info "Running database migrations..."
-    if [ -f "migrations/001_init_database.sql" ]; then
-        PGPASSWORD=arbitrage_pass psql -h localhost -p 5432 -U arbitrage_user -d arbitrage_db -f migrations/001_init_database.sql || \
-            log_warning "Could not run database migrations. Please run them manually."
-    fi
-    
+    make -C "$PROJECT_ROOT" migrate || \
+        log_warning "Could not run database migrations. Please run 'make migrate' manually."
+
     log_success "Development services started"
 }
 

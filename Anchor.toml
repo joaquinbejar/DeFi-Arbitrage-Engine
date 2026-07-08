@@ -6,19 +6,19 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-mev_protection = "MevProtect1111111111111111111111111111111"
-flash_arbitrage = "FlashArb1111111111111111111111111111111111"
-cross_dex_router = "CrossDex1111111111111111111111111111111111"
+mev_protection = "MevProtect111111111111111111111111111111111"
+flash_arbitrage = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+cross_dex_router = "CrossDEXRouter11111111111111111111111111111"
 
 [programs.devnet]
-mev_protection = "MevProtect1111111111111111111111111111111"
-flash_arbitrage = "FlashArb1111111111111111111111111111111111"
-cross_dex_router = "CrossDex1111111111111111111111111111111111"
+mev_protection = "MevProtect111111111111111111111111111111111"
+flash_arbitrage = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+cross_dex_router = "CrossDEXRouter11111111111111111111111111111"
 
 [programs.mainnet]
-mev_protection = "MevProtect1111111111111111111111111111111"
-flash_arbitrage = "FlashArb1111111111111111111111111111111111"
-cross_dex_router = "CrossDex1111111111111111111111111111111111"
+mev_protection = "MevProtect111111111111111111111111111111111"
+flash_arbitrage = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+cross_dex_router = "CrossDEXRouter11111111111111111111111111111"
 
 [registry]
 url = "https://api.apr.dev"

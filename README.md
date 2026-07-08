@@ -114,8 +114,8 @@ vim .env
 ### 3. Database Setup
 
 ```bash
-# Start TimescaleDB with Docker
-docker-compose up -d timescaledb
+# Start TimescaleDB with Docker (compose file lives in Docker/)
+docker compose -f Docker/docker-compose.yml up -d timescaledb
 
 # Run migrations
 make migrate
@@ -159,7 +159,7 @@ make dev-monitoring # Start monitoring stack
 
 ```bash
 # Start all services in production mode
-docker-compose up -d
+docker compose -f Docker/docker-compose.yml up -d
 ```
 
 ### Accessing Services
