@@ -39,18 +39,18 @@ spl-associated-token-account = { workspace = true }
 # tonic = "0.10"
 # prost = "0.12"
 # tonic-build = "0.10"
-rand = "0.8"
+rand = "0.10"
 bs58 = "0.5"
 bigdecimal = { version = "0.4", features = ["serde"] }
-tokio-cron-scheduler = "0.9"
+tokio-cron-scheduler = "0.15"
 tracing-appender = "0.2"
-config = "0.14"
-clap = { version = "4.4", features = ["derive"] }
-dashmap = "5.5"
+config = "0.15"
+clap = { version = "4.6", features = ["derive"] }
+dashmap = "6.2"
 parking_lot = "0.12"
 byteorder = "1.5"
-governor = "0.6"
-num_cpus = "1.16"
+governor = "0.10"
+num_cpus = "1.17"
 
 # Use workspace dependencies
 sha2 = { workspace = true }
@@ -79,11 +79,11 @@ sysinfo = { workspace = true }
 # Development dependencies
 [dev-dependencies]
 tokio-test = "0.4"
-mockall = "0.12"
-serial_test = "3.0"
+mockall = "0.15"
+serial_test = "4.0"
 test-log = "0.2"
-env_logger = "0.10"
-tempfile = "3.8"
+env_logger = "0.11"
+tempfile = "3.27"
 
 # Features
 [features]
@@ -92,7 +92,7 @@ default = []
 
 # Build script for gRPC code generation
 [build-dependencies]
-tonic-build = "0.10"
+tonic-build = "0.14"
 
 # Profiles are defined in the workspace root
 

@@ -265,7 +265,7 @@ pub fn execute_flash_arbitrage_handler(
     if program_fee > 0 {
         token::transfer(
             CpiContext::new(
-                ctx.accounts.token_program.to_account_info(),
+                ctx.accounts.token_program.key(),
                 Transfer {
                     from: ctx.accounts.user_token_account.to_account_info(),
                     to: ctx.accounts.fee_account.to_account_info(),
@@ -347,7 +347,7 @@ pub fn withdraw_fees_handler(ctx: Context<WithdrawFees>, amount: u64) -> Result<
 
     token::transfer(
         CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info(),
+            ctx.accounts.token_program.key(),
             Transfer {
                 from: ctx.accounts.fee_account.to_account_info(),
                 to: ctx.accounts.destination_account.to_account_info(),
