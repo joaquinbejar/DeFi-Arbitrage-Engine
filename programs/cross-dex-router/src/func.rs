@@ -402,7 +402,7 @@ pub fn execute_optimal_route_handler(
     if routing_fee > 0 {
         token::transfer(
             CpiContext::new(
-                ctx.accounts.token_program.to_account_info(),
+                ctx.accounts.token_program.key(),
                 Transfer {
                     from: ctx.accounts.output_token_account.to_account_info(),
                     to: ctx.accounts.fee_account.to_account_info(),
