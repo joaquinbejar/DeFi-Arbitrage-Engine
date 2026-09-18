@@ -1,6 +1,6 @@
 [package]
 name = "mev-protection"
-version = "0.1.0"
+version = "0.2.0"
 description = "MEV protection program for sandwich attack prevention and transaction ordering"
 edition = "2021"
 

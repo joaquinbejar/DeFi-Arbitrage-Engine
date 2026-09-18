@@ -1,6 +1,6 @@
 [package]
 name = "cross-dex-router"
-version = "0.1.0"
+version = "0.2.0"
 description = "Cross-DEX router program for multi-hop arbitrage optimization"
 edition = "2021"
 
