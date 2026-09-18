@@ -1,6 +1,6 @@
 [package]
 name = "flash-arbitrage"
-version = "0.1.0"
+version = "0.2.0"
 description = "Flash arbitrage program for atomic cross-DEX arbitrage execution"
 edition = "2021"
 
