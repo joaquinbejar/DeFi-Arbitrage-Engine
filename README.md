@@ -315,9 +315,16 @@ If you encounter any issues or have questions:
 ### **Contact Information**
 - **Author**: Joaquín Béjar García
 - **Email**: jb@taunais.com
-- **Telegram**: https://t.me/joaquin_bejar
-- **GitHub**: https://github.com/joaquinbejar/DeFi-Arbitrage-Engine
+- **Telegram**: [@joaquin_bejar](https://t.me/joaquin_bejar)
+- **Repository**: <https://github.com/joaquinbejar/DeFi-Arbitrage-Engine>
 
 ---
 
 **Built with ❤️ for the DeFi community**
+
+<!-- related-projects:start -->
+## Related projects
+
+No other repositories by the same author depend on this project, and it depends on none of them. See all repositories at <https://github.com/joaquinbejar?tab=repositories>.
+
+<!-- related-projects:end -->
